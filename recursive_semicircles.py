@@ -3,21 +3,15 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.ticker import MaxNLocator
 
-# ----------------------------------------------------------------------
-# Settings -- tweak these freely
-# ----------------------------------------------------------------------
-
-TOTAL_STEPS = 100        # how many arcs to draw in total
-FRAMES_PER_ARC = 18     # base frames for drawing one arc (used at step 1, slowest)
-HOLD_FRAMES = 12        # base pause (in frames) after each arc completes (step 1)
+TOTAL_STEPS = 100        
+FRAMES_PER_ARC = 18   
+HOLD_FRAMES = 12       
 FPS = 30
-MIN_SPEED_FACTOR = 0.15  # by the last arc, frames/hold shrink to this fraction
-                          # of the base values (lower = faster finish). Must be > 0.
-
+MIN_SPEED_FACTOR = 0.15  
 
 
 # ----------------------------------------------------------------------
-# 1. Build the sequence of events using the confirmed rule
+# 1. Build
 # ----------------------------------------------------------------------
 
 def build_events(total_steps):
@@ -50,7 +44,7 @@ def build_events(total_steps):
 
 
 # ----------------------------------------------------------------------
-# 2. Geometry helper -- sample points on the correct semicircle
+# 2. Geometry 
 # ----------------------------------------------------------------------
 
 def semicircle_arc_points(x0, x1, upward, n=80):
@@ -71,14 +65,11 @@ def semicircle_arc_points(x0, x1, upward, n=80):
 
 
 # ----------------------------------------------------------------------
-# 3. Precompute everything the animation will need
+# 3. Precompute 
 # ----------------------------------------------------------------------
 
 events = build_events(TOTAL_STEPS)
 
-# Vertical bulge alternates globally, one single counter across every step
-# regardless of color: step 1 up, step 2 down, step 3 up, step 4 down, ...
-# Color (blue/red) stays tied to direction (forward/backward) independently.
 for i, e in enumerate(events):
     e["bulge_up"] = (i % 2 == 0)
 
@@ -94,28 +85,13 @@ for seg in segment_points:
 
 
 def speed_factor(step_index, total_steps, min_factor=MIN_SPEED_FACTOR):
-    """
-    Returns a multiplier in (min_factor, 1.0] for how long step `step_index`
-    (0-based) should take relative to the base FRAMES_PER_ARC/HOLD_FRAMES.
-
-    1.0  = full length (slowest, used at step 0)
-    min_factor = shortest length (fastest, used at the final step)
-
-    Uses an ease-in curve (quadratic) so the speed-up is gentle at first
-    and accelerates more noticeably toward the end, rather than ramping
-    linearly the whole way.
-    """
     if total_steps <= 1:
         return 1.0
-    t = step_index / (total_steps - 1)   # 0.0 .. 1.0 across the whole sequence
-    eased = t * t                         # quadratic ease-in: starts slow, speeds up
+    t = step_index / (total_steps - 1)  
+    eased = t * t                   
     return 1.0 - eased * (1.0 - min_factor)
 
-
-# Build the timeline using a PER-STEP frame count: early arcs get the full
-# FRAMES_PER_ARC/HOLD_FRAMES, later arcs get progressively fewer frames
-# (faster), down to MIN_SPEED_FACTOR of the original at the last step.
-timeline = []  # (event_index, fraction_complete)
+timeline = []  
 for i in range(len(events)):
     factor = speed_factor(i, len(events))
     frames_this_arc = max(2, round(FRAMES_PER_ARC * factor))
@@ -144,21 +120,18 @@ def render_frame(idx):
     ax.clear()
     ev_idx, frac = timeline[idx]
 
-    # fully completed arcs so far, colored by direction
     for j in range(ev_idx):
         xs = [p[0] for p in segment_points[j]]
         ys = [p[1] for p in segment_points[j]]
         color = "#1f5fd1" if events[j]["upward"] else "#d11f1f"
         ax.plot(xs, ys, color=color, linewidth=1.5, zorder=2)
 
-    # currently drawing arc, in its direction's color (slightly thicker)
     partial = get_partial_segment(segment_points[ev_idx], frac)
     xs = [p[0] for p in partial]
     ys = [p[1] for p in partial]
     cur_color = "#1f5fd1" if events[ev_idx]["upward"] else "#d11f1f"
     ax.plot(xs, ys, color=cur_color, linewidth=2.2, zorder=3)
 
-    # zoom bounds blend smoothly toward this step's cumulative extent
     prev_lo, prev_hi = cumulative_bounds[ev_idx - 1] if ev_idx > 0 else (0.0, 1.0)
     target_lo, target_hi = cumulative_bounds[ev_idx]
     view_lo = prev_lo + (target_lo - prev_lo) * frac
@@ -166,7 +139,6 @@ def render_frame(idx):
     margin = 0.7
     ax.set_xlim(view_lo - margin, view_hi + margin)
 
-    # node DOTS: every visited node always gets a dot, regardless of zoom
     revealed = {0.0}
     for j in range(ev_idx):
         revealed.add(events[j]["from"])
@@ -185,12 +157,8 @@ def render_frame(idx):
     ax.set_aspect("equal")
     ax.set_facecolor("white")
 
-    # axis TICK LABELS: adaptive "nice number" ticks based on the visible
-    # range (1,2,5,10,20,50,100,...), independent of which nodes exist.
-    # This is what thins out as the view zooms out, instead of every
-    # single visited node's label competing for space.
     ax.xaxis.set_major_locator(MaxNLocator(nbins=10, steps=[1, 2, 5, 10]))
-    ax.spines["bottom"].set_position(("data", 0))   # spine sits exactly on y=0
+    ax.spines["bottom"].set_position(("data", 0))   
     ax.spines["bottom"].set_color("black")
     ax.spines["bottom"].set_linewidth(1.0)
     ax.xaxis.set_ticks_position("bottom")

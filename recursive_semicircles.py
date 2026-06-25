@@ -232,7 +232,7 @@ def render_frame(idx):
 
 
 if __name__ == "__main__":
-    print("Node sequence:", [round(n, 2) for n in [0] + [e["to"] for e in events]])
+    # print("Node sequence:", [round(n, 2) for n in [0] + [e["to"] for e in events]])
 
     anim = FuncAnimation(
         fig, render_frame, frames=len(timeline),
